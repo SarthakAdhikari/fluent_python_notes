@@ -45,7 +45,7 @@ print(beer_card)
   #+RESULTS:
   : Card(rank='7', suit='diamonds')
 
-  #+begin_src python :results output
+  #+begin_src python :results output :exports both
 deck = FrenchDeck()
 print(len(deck))
   #+end_src
@@ -53,7 +53,7 @@ print(len(deck))
   #+RESULTS:
   : 52
 
- #+begin_src python :results output
+ #+begin_src python :results output :exports both
 print(deck[0])
 print(deck[-1])
  #+end_src
@@ -62,7 +62,7 @@ print(deck[-1])
  : Card(rank='2', suit='spades')
  : Card(rank='A', suit='hearts')
 
- #+begin_src python :results output
+ #+begin_src python :results output :exports both
 from random import choice
 print(choice(deck))
 print(choice(deck))
@@ -78,7 +78,7 @@ print(choice(deck))
  + It is easier to benefit from the Python standard library and avoid reinventing the wheel, like ~random.choice~.
 
  Because we use [] for ~__getitem__~, our deck also supports slicing.
- #+begin_src python :results output
+ #+begin_src python :results output :exports both
 deck[:3]
  #+end_src
 
@@ -94,7 +94,7 @@ deck[:3]
  #+end_src
 
 
- #+begin_src python :results output :post head(*this*,lines=5)
+ #+begin_src python :results output :exports both :post head(*this*,lines=5)
 for card in deck:
     print(card)
  #+end_src
@@ -112,7 +112,7 @@ TypeError: "FrenchDeck" object is not iterable
  #+end_example
 
 If a collection has no ~__contains__~, the ~in~ operator does a sequential scan:
-#+begin_src python :results output
+#+begin_src python :results output :exports both
 print(Card('Q', 'hearts') in deck)
 print(Card('7', 'beasts') in deck)
 #+end_src
