@@ -9,8 +9,11 @@
 
 ** Pythonic card deck
 *** __getitem__ and len
+
+Create a class ~FrenchDeck~:
+
   #+caption: power of __getitem__ and __len__
-  #+begin_src python :exports none :results output
+#+begin_src python :exports code :results output
 
 import collections
 
