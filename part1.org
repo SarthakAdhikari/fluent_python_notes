@@ -121,6 +121,4 @@ print(Card('7', 'beasts') in deck)
 : True
 : False
 
-For sorting, a common system for ranking is through ranks(ace=hightest) and then by suit(in order: spade, hearts, diamonds and clubs).
-So, the lowest card is (🃒) and highest card is Ace of space(🂡).
-Here's a function that returns 0 for the 2 of clubs and 51 for the ace of spades
+For sorting, a common system for ranking is through ranks(ace=hightest) and then by suit(in order: spade, hearts, diamonds and clubs). So, the lowest card is 2 of clubs(♣) and highest card is Ace of space(♠). Here’s a function that returns 0 for the 2 of clubs and 51 for the ace of spades.
