@@ -1,0 +1,119 @@
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
+#+HTML_HEAD: <link rel="stylesheet" href="/home/sarthak/org/conf/css/rto_big.css" type="text/css">
+
+#+PROPERTY: header-args :session *my_py_session*
+#+OPTIONS: num:nil ^:nil \n:t H:6
+#+TITLE: Fluent Python part 1
+
+* Chapter 1
+
+** Pythonic card deck
+*** __getitem__ and len
+  #+caption: power of __getitem__ and __len__
+  #+begin_src python :exports none :results output
+
+import collections
+
+Card = collections.namedtuple('Card', ['rank','suit'])
+
+class FrenchDeck:
+    ranks = [str(n) for n in range(2,11)] + list('JQKA')
+    suits = 'spades diamonds clubs hearts'.split()
+
+    def __init__(self):
+        self._cards = [Card(rank,suit) for suit in self.suits
+                       for rank in self.ranks]
+
+    def __getitem__(self, position):
+        return self._cards[position]
+
+    def __len__(self):
+        return len(self._cards)
+  #+end_src
+
+  #+RESULTS:
+
+  Now, we use the following representation:
+  #+begin_src python :results output :exports both
+beer_card = Card('7', 'diamonds')
+print(beer_card)
+  #+end_src
+
+  #+RESULTS:
+  : Card(rank='7', suit='diamonds')
+
+  #+begin_src python :results output
+deck = FrenchDeck()
+print(len(deck))
+  #+end_src
+
+  #+RESULTS:
+  : 52
+
+ #+begin_src python :results output
+print(deck[0])
+print(deck[-1])
+ #+end_src
+
+ #+RESULTS:
+ : Card(rank='2', suit='spades')
+ : Card(rank='A', suit='hearts')
+
+ #+begin_src python :results output
+from random import choice
+print(choice(deck))
+print(choice(deck))
+ #+end_src
+
+ #+RESULTS:
+ : Card(rank='9', suit='hearts')
+ : Card(rank='J', suit='diamonds')
+
+ 2 advantages of using Python data model:
+
+ + Users don't have to memorize arbitrary method names for standard operations like getting the number of items.
+ + It is easier to benefit from the Python standard library and avoid reinventing the wheel, like ~random.choice~.
+
+ Because we use [] for ~__getitem__~, our deck also supports slicing.
+ #+begin_src python :results output
+deck[:3]
+ #+end_src
+
+ #+RESULTS:
+ : [Card(rank='2', suit='spades'), Card(rank='3', suit='spades'), Card(rank='4', suit='spades')]
+
+ Just by implementing ~__getitem__~, our deck is also iterable:
+ #+NAME: head
+ #+begin_src emacs-lisp :var data="" :var sep="\n" :var lines=10 :exports none
+  (cond
+   ((stringp data) (mapconcat #'identity (seq-take (split-string data "[\n]") lines) sep))
+   ((seqp data)    (seq-take data lines)))
+ #+end_src
+
+
+ #+begin_src python :results output :post head(*this*,lines=5)
+for card in deck:
+    print(card)
+ #+end_src
+
+ #+RESULTS:
+ : Card(rank='2', suit='spades')
+ : Card(rank='3', suit='spades')
+ : Card(rank='4', suit='spades')
+ : Card(rank='5', suit='spades')
+ : Card(rank='6', suit='spades')
+
+ If we did not implement the ~__getitem__~ method, we would get the following error:
+ #+begin_example
+TypeError: "FrenchDeck" object is not iterable
+ #+end_example
+
+If a collection has no ~__contains__~, the ~in~ operator does a sequential scan:
+#+begin_src python :results output
+print(Card('Q', 'hearts') in deck)
+print(Card('7', 'beasts') in deck)
+#+end_src
+
+#+RESULTS:
+: True
+: False
