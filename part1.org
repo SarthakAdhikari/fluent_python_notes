@@ -35,6 +35,10 @@ class FrenchDeck:
   #+end_src
 
   #+RESULTS:
+  : Python 3.8.6 (default, Sep 30 2020, 04:00:38)
+  : [GCC 10.2.0] on linux
+  : Type "help", "copyright", "credits" or "license" for more information.
+  : >>> python.el: native completion setup loaded
 
   Now, we use the following representation:
   #+begin_src python :results output :exports both
@@ -69,8 +73,8 @@ print(choice(deck))
  #+end_src
 
  #+RESULTS:
- : Card(rank='9', suit='hearts')
- : Card(rank='J', suit='diamonds')
+ : Card(rank='J', suit='clubs')
+ : Card(rank='2', suit='spades')
 
  2 advantages of using Python data model:
 
@@ -92,6 +96,8 @@ deck[:3]
    ((stringp data) (mapconcat #'identity (seq-take (split-string data "[\n]") lines) sep))
    ((seqp data)    (seq-take data lines)))
  #+end_src
+
+ #+RESULTS: head
 
 
  #+begin_src python :results output :exports both :post head(*this*,lines=5)
@@ -122,3 +128,565 @@ print(Card('7', 'beasts') in deck)
 : False
 
 For sorting, a common system for ranking is through ranks(ace=hightest) and then by suit(in order: spade, hearts, diamonds and clubs). So, the lowest card is 2 of clubs(♣) and highest card is Ace of space(♠). Here’s a function that returns 0 for the 2 of clubs and 51 for the ace of spades.
+
+#+begin_src python :results output :exports both
+suit_values = dict(spades=3, hearts=2, diamonds=1, clubs=0)
+
+def spades_high(card):
+    rank_value = FrenchDeck.ranks.index(card.rank)
+    return rank_value * len(suit_values) + suit_values[card.suit]
+#+end_src
+
+#+RESULTS:
+
+Given spades_high, we can list our deck in increasing rank:
+#+begin_src python :results output :post head(*this*,lines=5)
+for i in sorted(deck, key=spades_high):
+    print(card)
+#+end_src
+
+#+RESULTS:
+: Card(rank='A', suit='hearts')
+: Card(rank='A', suit='hearts')
+: Card(rank='A', suit='hearts')
+: Card(rank='A', suit='hearts')
+: Card(rank='A', suit='hearts')
+
+Even though, we only implemented ~__len__~ and ~__getitem___~, our ~FrenchDeck~ acts behaveslike a Python sequence. That is because they can delegate the work to the ~list~ object, =self.cards=.
+
+If we call ~len()~ on an object, then Python calls the __len__ method we implemented if it is an instance of the user defined class.
+
+But if it is a ~list,~ ~str~, ~bytearray~ or Numpy arrays, it returns the value of ~ob_size~ field in the ~PyVarObject~ struct in C. This is faster than calling a method.
+
+Normally, unless we are doing a lot of metaprogramming, our code should be implementing special methods more often than invoking them. The only special method that is frequently called by user code directly is ~__init__~, to invoke the initializer of superclass in our own __init__ implementation.
+
++ Call the built-in function(len,iter,str) instead of the special method because they are faster and provide more services.
+
+** Enumerating Numeric Types
+
+Let us create a vector.
+#+begin_src python :results output :exports both
+from math import hypot
+
+class Vector:
+    def __init__(self, x=0, y=0):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return 'Vector(%r,%r)' % (self.x, self.y)
+
+    def __abs__(self):
+        return hypot(self.x, self.y)
+
+    def __bool__(self):
+        return bool(abs(self))
+
+    def __add__(self, other):
+        x = self.x + other.x
+        y = self.y + other.y
+        return Vector(x,y)
+
+    def __mul__(self, scalar):
+        return Vector(self.x * scalar, self.y * scalar)
+#+end_src
+
+#+RESULTS:
+
++ String returned by __repr__ should be unambiguous and, if possible, match the source code necessary to re-create the object being represented.
+
++ The + and * operaotor don't modify the self or other, but only read them. This is the expected behaviour of infix opeators: to create new objects and not touch their operands.
+
++ By default, ~bool()~ returns true for user-defined classes unless either __bool__ or __len__. Else, it calls __bool__, if that is not present, it calls __len__ and if it returns 0, then ~bool()~ it returns =False= else it returns =True=.
+
++ ~len()~ is not a method because it gets special treatment and reads the value of ~ob_zie~, so it gets special treatment. Practicality beats purity! But we can implement our own __len__ to maintain consistency. Special cases aren't special enough to break the rules.
+
+* Chapter 2
+
+** An array of sequences
+*** Grouping of sequences
+**** Container and Flat sequences
+     Container sequences(list, tuple, collections.deque) hold references to objects which may be of any type.
+
+     Flat sequences(str,bytes,array.array) hold the value of each items within its own memory and not as distinct objects.
+*** Tuples
+
+    Tuples can be used as an "immutable list" and also to store records.
+
+**** Tuples unpacking
+
+     #+begin_src python :results output :exports both
+lax_coordinates = (33.9425, -118.408056)
+lat, lon = lax_coordinates
+print(lat)
+print(lon)
+     #+end_src
+
+     #+RESULTS:
+     : 33.9425
+     : -118.408056
+
+**** Using * to grab excess items
+#+begin_src python :results output :exports both
+a,b, *rest = range(5)
+print(a,b,rest)
+#+end_src
+
+#+RESULTS:
+: 0 1 [2, 3, 4]
+
+*** Named Tuples
+
+    #+begin_src python :results output :exports both
+from collections import namedtuple
+City = namedtuple('City', 'name country population coordinates')
+tokyo = City('Tokyo', 'JP', 36.933, (35.689722, 139.691667))
+print(tokyo)
+print(tokyo.population)
+print(tokyo[1])
+    #+end_src
+
+    #+RESULTS:
+    : City(name='Tokyo', country='JP', population=36.933, coordinates=(35.689722, 139.691667))
+    : 36.933
+    : JP
+
+We can access the named tuple fields as such:
+#+begin_src python :results output :exports both
+print(City._fields)
+LatLong = namedtuple('LatLong', 'lat long')
+delhi_data = ('Delhi NCR', 'IN', 21.935, LatLong(28.61,77.20))
+delhi = City._make(delhi_data)
+print(delhi)
+print(delhi._asdict())
+#+end_src
+
+#+RESULTS:
+: ('name', 'country', 'population', 'coordinates')
+: City(name='Delhi NCR', country='IN', population=21.935, coordinates=LatLong(lat=28.61, long=77.2))
+: {'name': 'Delhi NCR', 'country': 'IN', 'population': 21.935, 'coordinates': LatLong(lat=28.61, long=77.2)}
+
+*** Slicing
+
+**** Why Slices and Range Exclude the Last Item?
+
++ It's easy to see the length of the slice when only the stop position is given:
+~range(3)~ and ~my_list[:3]~ both produce three items.
++ Easy to compute the lenght of a slice or range when start and stop are given:
+just subtract stop - start.
++ Easy to split a sequence into two parts at any index x, without overlapping:
+#+begin_src python :results output :exports both
+l = [10,20,30,40,50]
+print(l[:3])
+print(l[3:])
+#+end_src
+
+#+RESULTS:
+: [10, 20, 30]
+: [40, 50]
+
+**** Assigning to slices
+#+begin_src python :results output :exports both
+l = list(range(10))
+print(l)
+l[2:5] = [20,30]
+print(l)
+del(l[5:7])
+print(l)
+l[3::2] = [11,22]
+print(l)
+l[2:5] = 100
+#+end_src
+
+#+RESULTS:
+: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+: [0, 1, 20, 30, 5, 6, 7, 8, 9]
+: [0, 1, 20, 30, 5, 8, 9]
+: [0, 1, 20, 11, 5, 22, 9]
+: Traceback (most recent call last):
+:   File "<stdin>", line 1, in <module>
+:   File "/tmp/babel-3KjS33/python-7iQjg6", line 9, in <module>
+:     l[2:5] = 100
+: TypeError: can only assign an iterable
+
+We can only assign an iterable object even if it has just one item.
+*** Using + and * with Sequences
+
+    While using + and *, none of the operands are modified but the result is expected to be a new sequence of the same type. For eg:
+#+begin_src python :results output :exports both
+l = [1,2,3]
+print(l * 5)
+print(l)
+a = 'abc'
+print (5 * a)
+print(a)
+#+end_src
+
+#+RESULTS:
+: [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3]
+: [1, 2, 3]
+: abcabcabcabcabc
+: abc
+
+*** Building Lists of Lists
+
+To represent a tic-tac-toe board, one might do something like:
+#+begin_src python :results output :exports both
+board = [['_'] * 3 for i in range(3)]
+print(board)
+board[1][1] = "X"
+print(board)
+#+end_src
+
+#+RESULTS:
+: [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+: [['_', '_', '_'], ['_', 'X', '_'], ['_', '_', '_']]
+
+is equivalent to:
+#+begin_src python :results output :exports both
+board = []
+for i in range(3):
+    row = ['_'] * 3
+    board.append(row)
+print(board)
+#+end_src
+
+#+RESULTS:
+: [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+
+But if we do it the following way, it would be incorrect:
+#+begin_src python :results output :exports both
+weird_board = [['_'] * 3] * 3
+print(weird_board)
+weird_board[1][2] = "X"
+print(weird_board)
+#+end_src
+
+#+RESULTS:
+: [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+: [['_', '_', 'X'], ['_', '_', 'X'], ['_', '_', 'X']]
+
+which is equivalent to:
+#+begin_src python :results output :exports both
+row = ['_'] * 3
+weird_board = []
+for i in range(3):
+    board = weird_board.append(row)
+print(weird_board)
+#+end_src
+
+#+RESULTS:
+: [['_', '_', '_'], ['_', '_', '_'], ['_', '_', '_']]
+
+*** Augemented Assignment with Sequences
+
+For the ~+=~ operator, python first checks for __iadd__ method and if it is not implemented, __add__ is used as a fallback.
+
+For eg:
+#+begin_src python :results output :exports both :eval no
+a += b
+#+end_src
+
+If ~a~ implements __iadd__, that will be called. If the sequence is mutable(list, bytearray etc), ~a~ will be changed(same effect as a.extend(b)).
+However, when ~a~ does not implement __iadd__, the expression a += b has the same effect as a = a + b, a + b is first evaluated and then assigned to a.
+
+In most cases for mutable sequences, __iadd__ is implemented.
+
+Same applies to ~*=~ which uses __imul__.
+
+#+begin_src python :results output :exports both
+l = [1,2,3]
+print("For list:")
+print(id(l))
+l *= 2
+print(id(l))
+
+print("For tuple:")
+t = (1,2,3)
+print(id(t))
+t *= 2
+print(id(t))
+#+end_src
+
+#+RESULTS:
+: For list:
+: 139838879089536
+: 139838879089536
+: For tuple:
+: 139838879078912
+: 139838879787520
+
+As we can see, after multiplication a new tuple is created.
+
+*** A += Assignment Puzzler
+
+Let us try to do the following:
+#+begin_src python :results output :exports both
+t = (1, 2, [30, 40])
+t[2] += [50,60]
+#+end_src
+
+#+RESULTS:
+: Traceback (most recent call last):
+:   File "<stdin>", line 1, in <module>
+:   File "/tmp/babel-3KjS33/python-hgv8i5", line 2, in <module>
+:     t[2] += [50,60]
+: TypeError: 'tuple' object does not support item assignment
+
+#+begin_src python :results output :exports both
+print(t)
+#+end_src
+
+#+RESULTS:
+: (1, 2, [30, 40, 50, 60])
+
+It raised an error but the assignment also took place.
+
+3 lessons:
++ Putting mutable items in a tuple is not a good idea
++ Augmented assigned is not an atomic opearation - it threw and error but also changed the value of the list.
+
+*** list.sort and the sorted built-in function
+
+~list.sort()~ changes the target object and does not create a new object, so it returns None. This is an important python convention:
+
++ Functions or methods that change and object in place should return ~None~ to make it clear to the caller that the object itself was changed.
+
+~sorted()~ creates a new list and returns it. Regardles of type of iterable given to ~sorted~ (tuple,generators), it always returns a newly created list.
+
+They both take two arguments:
++ reverse
+If true, items are returned in descending order. Default: False
+
++ key
+One argument function that will be applied to each item to produce its sorting key.
+For eg: key=len to sort by character length. Default is the identity function i.e., the item itself.
+
+#+begin_src python :results output :exports both
+fruits = ['grape','raspberry','apple','banana']
+print(sorted(fruits))
+print(sorted(fruits, reverse=True))
+print(sorted(fruits, key=len))
+print(sorted(fruits, key=len, reverse=True))
+print(fruits)
+#+end_src
+
+#+RESULTS:
+: ['apple', 'banana', 'grape', 'raspberry']
+: ['raspberry', 'grape', 'banana', 'apple']
+: ['grape', 'apple', 'banana', 'raspberry']
+: ['raspberry', 'banana', 'grape', 'apple']
+: ['grape', 'raspberry', 'apple', 'banana']
+
+*** Managing Ordered Sequences with bisect
+
+**** Searching with bisect
+
+#+begin_src python :results output :exports both
+import bisect
+
+start='left'
+HAYSTACK = [1, 4, 5, 6, 8, 12, 15, 20, 21, 23, 23, 26, 29, 30]
+NEEDLES = [0, 1, 2, 5, 8, 10, 22, 23, 29, 30, 31]
+
+ROW_FMT = '{0:2d} @ {1:2d}    {2}{0:<2d}'
+
+def demo(bisect_fn):
+    for needle in reversed(NEEDLES):
+        position = bisect_fn(HAYSTACK, needle)  # <1>
+        offset = position * '  |'  # <2>
+        print(ROW_FMT.format(needle, position, offset))  # <3>
+
+
+if start == 'left':    # <4>
+    bisect_fn = bisect.bisect_left
+else:
+    bisect_fn = bisect.bisect
+
+print('DEMO:', bisect_fn.__name__)  # <5>
+print('haystack ->', ' '.join('%2d' % n for n in HAYSTACK))
+demo(bisect_fn)
+
+#+end_src
+
+#+RESULTS:
+#+begin_example
+DEMO: bisect_left
+haystack ->  1  4  5  6  8 12 15 20 21 23 23 26 29 30
+31 @ 14      |  |  |  |  |  |  |  |  |  |  |  |  |  |31
+30 @ 13      |  |  |  |  |  |  |  |  |  |  |  |  |30
+29 @ 12      |  |  |  |  |  |  |  |  |  |  |  |29
+23 @  9      |  |  |  |  |  |  |  |  |23
+22 @  9      |  |  |  |  |  |  |  |  |22
+10 @  5      |  |  |  |  |10
+ 8 @  4      |  |  |  |8
+ 5 @  2      |  |5
+ 2 @  1      |2
+ 1 @  0    1
+ 0 @  0    0
+#+end_example
+
+~bisect~ can be use to perform table lookups by numeric values - for example, to convert test scores to letter grades/
+
+#+begin_src python :results output :exports both
+def grade(score, breakpoints=[60,70,80,90], grades = 'FDBCA'):
+    i = bisect.bisect(breakpoints, score)
+    return grades[i]
+
+result = [grade(score) for score in [59, 33,99,77,70,89,90,100]]
+print(result)
+#+end_src
+
+#+RESULTS:
+: ['F', 'F', 'A', 'B', 'B', 'C', 'A', 'A']
+
+**** Inserting with bisect.insort
+
+     ~insort(seq,item)~ inserts item into seq so as to keep seq in ascending order.
+
+#+begin_src python :results output :exports both
+import bisect
+import random
+
+SIZE = 7
+random.seed(1729)
+my_list = []
+for i in range(SIZE):
+    new_item = random.randrange(SIZE*2)
+    bisect.insort(my_list, new_item)
+    print('%2d ->' % new_item, my_list)
+#+end_src
+
+#+RESULTS:
+: 10 -> [10]
+:  0 -> [0, 10]
+:  6 -> [0, 6, 10]
+:  8 -> [0, 6, 8, 10]
+:  7 -> [0, 6, 7, 8, 10]
+:  2 -> [0, 2, 6, 7, 8, 10]
+: 10 -> [0, 2, 6, 7, 8, 10, 10]
+
+
+Similarly, we can use ~insort_left~ that uses bisect_left to find intersection points.
+
+**** When a list is not the answer
+
++ If you need to store 10 million floating point values, an ~array~ is much more efficient.
++ If you are constantly adding or removing items from the ends of a list as FIFO or LIFO, use double-ended queue(~deque~).
++ If you do a lot of containment checks(eg: item in my_collection), consider using ~set~ becacause they are optimized for fast membership checking, but are not sequences.
+
+***** Arrays
+
+      Example of creating, saving and loading 10 million floats
+
+      #+begin_src python :results output :exports both :eval no
+from array import array
+from random import random
+floats = array('d', (random() for i in range(10**7)))
+print(floats[-1])
+fp = open('floats.bin', 'wb')
+floats.tofile(fp)
+fp.close()
+floats2 = array('d')
+fp = open('floats.bin', 'rb')
+floats2.fromfile(fp, 10**7)
+fp.close()
+print(floats2[-1])
+print(floats2 == floats)
+      #+end_src
+
+      #+RESULTS:
+      : 0.8212054611418069
+      : 0.8212054611418069
+      : True
+
++ The ~pickle~ module is another fast and more flexible way of saving numeric data. It handles almost all types and is as fast as arrays in this case.
+
+
+***** Memory Views
+
+#+begin_src python :results output :exports both
+import array
+numbers = array.array('h', [-2,-1,0,1,2])
+memv = memoryview(numbers)
+print("length: ", len(memv))
+print("memv[0] = ", memv[0])
+memv_oct = memv.cast('B')
+print(memv_oct.tolist())
+memv_oct[5] = 4
+print(numbers)
+#+end_src
+
+#+RESULTS:
+: length:  5
+: memv[0] =  -2
+: [254, 255, 255, 255, 0, 0, 1, 0, 2, 0]
+: array('h', [-2, -1, 1024, 1, 2])
+
+***** Numpy and Scipy
+
+#+begin_src python :results output :exports both
+import numpy
+a = numpy.arange(12)
+print("a = ", a)
+print("type(a) = ", type(a))
+print("a.shape = ",a.shape)
+a.shape = 3,4
+print("a:\n", a)
+print("a[2] = ", a[2])
+print("a[:, 1] = ", a[:,1])
+print("transpose:\n", a.transpose())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+a =  [ 0  1  2  3  4  5  6  7  8  9 10 11]
+type(a) =  <class 'numpy.ndarray'>
+a.shape =  (12,)
+a:
+ [[ 0  1  2  3]
+ [ 4  5  6  7]
+ [ 8  9 10 11]]
+a[2] =  [ 8  9 10 11]
+a[:, 1] =  [1 5 9]
+transpose:
+ [[ 0  4  8]
+ [ 1  5  9]
+ [ 2  6 10]
+ [ 3  7 11]]
+#+end_example
+
+***** Deques and Queues
+
+#+begin_src python :results output :exports both
+from collections import deque
+dq = deque(range(10), maxlen=10)
+print(dq)
+dq.rotate(3)
+print(dq)
+dq.rotate(-4)
+print(dq)
+dq.appendleft(-1)
+print(dq)
+dq.extend([11,22,33])
+print(dq)
+dq.extendleft([10,20,30,40])
+print(dq)
+#+end_src
+
+#+RESULTS:
+: deque([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], maxlen=10)
+: deque([7, 8, 9, 0, 1, 2, 3, 4, 5, 6], maxlen=10)
+: deque([1, 2, 3, 4, 5, 6, 7, 8, 9, 0], maxlen=10)
+: deque([-1, 1, 2, 3, 4, 5, 6, 7, 8, 9], maxlen=10)
+: deque([3, 4, 5, 6, 7, 8, 9, 11, 22, 33], maxlen=10)
+: deque([40, 30, 20, 10, 3, 4, 5, 6, 7, 8], maxlen=10)
+
+~extendleft(iter)~ works by appending each successive item of ~iter~ argument to the left of deque, so the final position is reversed.
+
++ Removing items from middle of a deque is not as fast as a list.
++ ~append~ and ~popleft~ operations are atomic, so ~deque~ is safe to use as a LIFO queue in multithreaded applications without the need for using locks.
+
+~dequeue~ = doubly linked queues which uses doubly linked list behind the scenes. Allows insertion from both ends.
+
+~queue~ = Does not allow insertion from both ends.
